@@ -12,22 +12,14 @@ import (
 	"github.com/prometheus/common/log"
 )
 
-const usage = `prom-puppet-agent-exporter - tool for exporting Puppet agent metrics for Prometheus
+const usage = `puppet-agent-exporter - prometheus exporter for puppet agent
 
 Usage:
 
-  prom-puppet-agent-exporter [commands|flags]
+  puppet-agent-exporter [commands|flags]
 
 The commands & flags are:
-
-  version                   print the version to stdout
 `
-
-var (
-	version   = "n/a"
-	goVersion = "n/a"
-	gitBranch = "n/a"
-)
 
 func main() {
 	var (
@@ -51,23 +43,11 @@ func main() {
 		reportFileScraper = NewSummaryReportScraper(*namespace, *puppetYamlSummaryReportFile, *puppetDisabledLockFile)
 	}
 
-	buildInfoGauge := prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Namespace:   *namespace,
-			Subsystem:   "exporter",
-			Name:        "build_info",
-			Help:        "Prometheus puppet agent exporter build info in labels",
-			ConstLabels: prometheus.Labels{"version": version, "goversion": goVersion, "branch": gitBranch},
-		},
-	)
-	buildInfoGauge.Set(1)
-
 	prometheus.MustRegister(
 		NewPuppetExporter(
 			*namespace,
 			reportFileScraper,
 		),
-		buildInfoGauge,
 	)
 
 	serveHTTP(*listenAddress, *metricsPath)
@@ -77,9 +57,9 @@ func serveHTTP(listenAddress string, metricsEndpoint string) {
 	http.Handle(metricsEndpoint, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
-			<head><title>Puppet Exporter</title></head>
+			<head><title>Puppet Agent Exporter</title></head>
 			<body>
-			<h1>Puppet Exporter</h1>
+			<h1>Puppet Agent Exporter</h1>
 			<p><a href="` + metricsEndpoint + `">Metrics</a></p>
 			</body>
 			</html>`))
@@ -106,8 +86,6 @@ func handleFlags(flags []string) {
 	}
 
 	switch flags[0] {
-	case "version":
-		printVersion()
 	case "help":
 		printUsage()
 	}
@@ -118,16 +96,5 @@ func printUsage() {
 	fmt.Println(usage)
 	flag.PrintDefaults()
 
-	os.Exit(0)
-}
-
-// printVersion prints exporter version
-func printVersion() {
-	out := version
-	if out == "" {
-		out = "n/a"
-	}
-
-	fmt.Println(out)
 	os.Exit(0)
 }
